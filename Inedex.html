@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>チェスであそぼう</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800&family=Noto+Sans+Symbols+2&display=swap" rel="stylesheet">
+<style>
+/* VOICE: やさしく元気、子ども向けのクラブのチェスセット
+   IDEA: 緑のフェルトのテーブルに置いた木のチェス盤
+   PICTURE: 盤そのものが主役。大きく、タップしやすく
+   COLOUR and TYPE: 深い緑のフェルト、木目の盤、金色のアクセント／M PLUS Rounded
+   LAYOUT: iPad横=盤の右に操作パネル、縦=盤の下にパネル */
+:root{color-scheme:dark;--felt:#1e4a38;--felt2:#163a2c;--ink:#fdf8ec;--gold:#f5c542;--lt:#f0d9b5;--dk:#b58863;--card:#fff7e6;--cardink:#2b2118}
+*{box-sizing:border-box;min-width:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{margin:0;background:radial-gradient(circle at 30% 20%,#2a5e48,var(--felt) 45%,var(--felt2));color:var(--ink);font:500 17px/1.5 "M PLUS Rounded 1c",system-ui,sans-serif;overflow-x:clip;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+.wrap{--bs:min(94vw,calc(100svh - 250px),760px);display:grid;justify-content:center;justify-items:center;gap:14px;padding:max(14px,env(safe-area-inset-top)) 12px 20px}
+h1{margin:0;font-size:32px;font-weight:800;line-height:1.05;letter-spacing:.02em}
+h1 span{color:var(--gold)}
+.frame{padding:calc(var(--bs)*.022);background:linear-gradient(145deg,#6b3f1f,#4a2a14);border-radius:14px;box-shadow:0 14px 30px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.2)}
+.board{width:var(--bs);height:var(--bs);display:grid;grid-template:repeat(8,1fr)/repeat(8,1fr);border-radius:6px;overflow:hidden}
+.sq{position:relative;display:grid;place-items:center;cursor:pointer}
+.sq.l{background:var(--lt)}.sq.d{background:var(--dk)}
+.sq.last::before{content:"";position:absolute;inset:0;background:rgba(255,214,60,.45)}
+.sq.sel::before{content:"";position:absolute;inset:0;background:rgba(80,190,255,.55)}
+.sq.chk::before{content:"";position:absolute;inset:0;background:radial-gradient(circle,rgba(255,40,40,.9),rgba(255,40,40,.15) 70%)}
+.sq.dot::after{content:"";position:absolute;width:30%;height:30%;border-radius:50%;background:rgba(30,90,60,.55)}
+.sq.cap::after{content:"";position:absolute;inset:4%;border-radius:50%;border:calc(var(--bs)*.008) solid rgba(220,40,40,.75)}
+.co{position:absolute;font-size:calc(var(--bs)*.022);font-weight:800;opacity:.7;line-height:1}
+.co.f{right:5%;bottom:3%}.co.r{left:5%;top:4%}
+.sq.l .co{color:var(--dk)}.sq.d .co{color:var(--lt)}
+.pc{position:relative;z-index:1;font-family:"Noto Sans Symbols 2","Apple Symbols","Segoe UI Symbol","DejaVu Sans",serif;font-size:calc(var(--bs)/8*.8);line-height:1;pointer-events:none}
+.pc.w{color:#fffdf6;-webkit-text-stroke:calc(var(--bs)*.003) #1d1d1d;text-shadow:0 3px 3px rgba(0,0,0,.35)}
+.pc.b{color:#1d1a18;text-shadow:0 3px 3px rgba(0,0,0,.35),0 0 2px rgba(255,255,255,.6)}
+.pc.mv{z-index:5;filter:drop-shadow(0 8px 6px rgba(0,0,0,.35))}
+.pc.ghost{position:absolute;inset:0;display:grid;place-items:center;z-index:0}
+.side{display:grid;gap:12px;width:var(--bs);max-width:100%}
+.status{display:flex;align-items:center;gap:12px;background:var(--card);color:var(--cardink);border-radius:14px;padding:12px 16px;font-size:22px;font-weight:800;min-height:64px}
+.disc{flex:none;width:30px;height:30px;border-radius:50%;border:3px solid #2b2118}
+.disc.w{background:#fff}.disc.b{background:#222}
+.status small{display:block;font-size:15px;font-weight:500;color:#7a5a3a}
+.trays{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tray{background:rgba(0,0,0,.22);border-radius:12px;padding:8px 10px;min-height:56px}
+.tray b{display:block;font-size:13px;opacity:.85}
+.tray .pc{font-size:26px}
+.btns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+button{font:inherit;font-weight:800;min-height:52px;border:0;border-radius:12px;padding:8px 10px;background:var(--gold);color:#2b2118;cursor:pointer;box-shadow:0 4px 0 #b88a12}
+button:active{transform:translateY(3px);box-shadow:0 1px 0 #b88a12}
+button.sub{background:#fff7e6;box-shadow:0 4px 0 #c9b48f}
+button:disabled{opacity:.45}
+button:focus-visible{outline:3px solid #fff;outline-offset:2px}
+@media(orientation:landscape) and (min-width:820px){
+ .wrap{--bs:min(calc(100svh - 110px),calc(100vw - 400px),820px);grid-template-columns:auto 300px;align-items:start;justify-items:start;column-gap:28px}
+ .wrap h1{grid-column:1/-1;justify-self:center}
+ .side{width:300px}.btns{grid-template-columns:1fr}
+}
+.ov{position:fixed;inset:0;background:rgba(10,25,18,.72);display:none;place-items:center;padding:16px;z-index:10}
+.ov.on{display:grid}
+.dlg{background:var(--card);color:var(--cardink);border-radius:20px;padding:22px;width:min(520px,100%);max-height:92svh;overflow:auto;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+.dlg h2{margin:0 0 12px;font-size:26px;font-weight:800;line-height:1.1}
+.grp{margin:12px 0}.grp b{display:block;margin-bottom:6px}
+.seg{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:8px}
+.seg button{background:#efe3c8;box-shadow:0 4px 0 #c9b48f;font-size:16px}
+.seg button.on{background:var(--gold);box-shadow:0 4px 0 #b88a12}
+.go{width:100%;margin-top:14px;font-size:22px;min-height:60px}
+.promo{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.promo button{min-height:90px;background:#efe3c8;box-shadow:0 4px 0 #c9b48f}
+.promo .pc{font-size:56px}
+.dlg.wide{width:min(700px,100%)}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.tabs button{background:#efe3c8;box-shadow:0 4px 0 #c9b48f;font-size:18px}
+.tabs button.on{background:var(--gold);box-shadow:0 4px 0 #b88a12}
+.hl{display:grid;gap:10px}
+.hi{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center;background:#f3e6c9;border-radius:14px;padding:12px}
+.hi h3{margin:0 0 4px;font-size:20px;font-weight:800;line-height:1.2}
+.hi p{margin:0;font-size:16px}
+.dg{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;font-weight:800;font-size:22px}
+.mini{--m:30px;display:grid;border:3px solid #6b3f1f;border-radius:4px}
+.ms{position:relative;width:var(--m);height:var(--m);display:grid;place-items:center}
+.ms.l{background:var(--lt)}.ms.d{background:var(--dk)}
+.ms .pc{font-size:calc(var(--m)*.82);text-shadow:none}
+.ms.dot::after{content:"";position:absolute;width:34%;height:34%;border-radius:50%;background:#1e7a4c}
+.ms.cap::after{content:"";position:absolute;inset:6%;border-radius:50%;border:3px solid #d62828}
+.ms.att::before,.ms.ray::before,.ms.last::before{content:"";position:absolute;inset:0}
+.ms.att::before{background:rgba(230,30,30,.75)}.ms.ray::before{background:rgba(230,40,40,.3)}.ms.last::before{background:rgba(255,205,40,.6)}
+@media(max-width:600px){.hi{grid-template-columns:1fr;justify-items:center;text-align:left}}
+.big{font-size:34px;font-weight:800;text-align:center;margin:6px 0 4px;line-height:1.15}
+.mid{text-align:center;margin:0 0 6px}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>チェスで<span>あそぼう</span></h1>
+  <div class="frame"><div class="board" id="board"></div></div>
+  <div class="side">
+    <div class="status"><div class="disc w" id="disc"></div><div id="stat">しろのばん</div></div>
+    <div class="trays">
+      <div class="tray"><b>しろが とった こま</b><div id="capW"></div></div>
+      <div class="tray"><b>くろが とった こま</b><div id="capB"></div></div>
+    </div>
+    <div class="btns">
+      <button id="undo" class="sub">↩ もどす</button>
+      <button id="newg">あたらしく</button>
+      <button id="helpb" class="sub">ルールを みる</button>
+    </div>
+  </div>
+</div>
+
+<div class="ov on" id="setup"><div class="dlg">
+  <h2>だれと あそぶ？</h2>
+  <div class="grp"><b>あいて</b><div class="seg" data-k="mode"><button data-v="cpu">コンピューター</button><button data-v="pvp">ともだち（ふたりで）</button></div></div>
+  <div class="grp cpuOnly"><b>コンピューターの つよさ</b><div class="seg" data-k="lv"><button data-v="1">やさしい</button><button data-v="2">ふつう</button><button data-v="3">つよい</button></div></div>
+  <div class="grp cpuOnly"><b>じぶんの いろ</b><div class="seg" data-k="me"><button data-v="w">しろ（さきに うごく）</button><button data-v="b">くろ</button></div></div>
+  <button class="go" id="start">はじめる！</button>
+</div></div>
+
+<div class="ov" id="promoOv"><div class="dlg"><h2>ポーンが ゴールした！ なにに かわる？</h2><div class="promo" id="promo"></div></div></div>
+
+<div class="ov" id="endOv"><div class="dlg"><p class="big" id="endBig"></p><p class="mid" id="endMsg"></p><button class="go" id="again">もういっかい！</button><button class="go sub" id="look">ばんめんを みる</button></div></div>
+
+<div class="ov" id="helpOv"><div class="dlg wide">
+<div class="tabs" id="tabs"><button data-t="mv" class="on">こまの うごき</button><button data-t="rl">ルール</button></div>
+<div class="hl" id="helpList"></div>
+<button class="go" id="helpClose">わかった！</button></div></div>
+
+<script>
+{
+const VS='︎',G={K:'♚',Q:'♛',R:'♜',B:'♝',N:'♞',P:'♟'};
+const VAL={P:100,N:320,B:330,R:500,Q:900,K:0};
+const KD=[[1,1],[1,-1],[-1,1],[-1,-1],[1,0],[-1,0],[0,1],[0,-1]],BD=KD.slice(0,4),RD=KD.slice(4);
+const ND=[[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]];
+const on=(r,c)=>r>=0&&r<8&&c>=0&&c<8, opp=c=>c==='w'?'b':'w', CN={w:'しろ',b:'くろ'};
+const $=id=>document.getElementById(id);
+
+function init(){const b=Array(64).fill(null),bk='RNBQKBNR';for(let c=0;c<8;c++){b[c]='b'+bk[c];b[8+c]='bP';b[48+c]='wP';b[56+c]='w'+bk[c];}return{b,turn:'w',cr:{wK:1,wQ:1,bK:1,bQ:1},ep:-1};}
+
+function attacked(b,sq,by){const r=sq>>3,c=sq&7,pd=by==='w'?1:-1;
+  for(const dc of[-1,1]){const rr=r+pd,cc=c+dc;if(on(rr,cc)&&b[rr*8+cc]===by+'P')return true;}
+  for(const[dr,dc]of ND){const rr=r+dr,cc=c+dc;if(on(rr,cc)&&b[rr*8+cc]===by+'N')return true;}
+  for(const[dr,dc]of KD){const rr=r+dr,cc=c+dc;if(on(rr,cc)&&b[rr*8+cc]===by+'K')return true;}
+  for(const[dirs,k]of[[BD,'B'],[RD,'R']])for(const[dr,dc]of dirs){let rr=r+dr,cc=c+dc;while(on(rr,cc)){const p=b[rr*8+cc];if(p){if(p===by+k||p===by+'Q')return true;break;}rr+=dr;cc+=dc;}}
+  return false;}
+
+function pseudo(s){const b=s.b,t=s.turn,o=opp(t),m=[];
+  for(let i=0;i<64;i++){const p=b[i];if(!p||p[0]!==t)continue;const k=p[1],r=i>>3,c=i&7;
+    if(k==='P'){const d=t==='w'?-1:1,sr=t==='w'?6:1,pr=t==='w'?0:7,r1=r+d;
+      const add=to=>{if((to>>3)===pr)for(const q of'QRBN')m.push({f:i,t:to,pr:q});else m.push({f:i,t:to});};
+      if(on(r1,c)&&!b[r1*8+c]){add(r1*8+c);const r2=r+2*d;if(r===sr&&!b[r2*8+c])m.push({f:i,t:r2*8+c,dbl:1});}
+      for(const dc of[-1,1]){const cc=c+dc;if(!on(r1,cc))continue;const to=r1*8+cc;if(b[to]&&b[to][0]===o)add(to);else if(to===s.ep)m.push({f:i,t:to,ep:1});}
+    }else if(k==='N'||k==='K'){
+      for(const[dr,dc]of k==='N'?ND:KD){const rr=r+dr,cc=c+dc;if(!on(rr,cc))continue;const to=rr*8+cc;if(!b[to]||b[to][0]===o)m.push({f:i,t:to});}
+      if(k==='K'&&i===(t==='w'?60:4)&&!attacked(b,i,o)){
+        if(s.cr[t+'K']&&!b[i+1]&&!b[i+2]&&b[i+3]===t+'R'&&!attacked(b,i+1,o)&&!attacked(b,i+2,o))m.push({f:i,t:i+2,cs:'K'});
+        if(s.cr[t+'Q']&&!b[i-1]&&!b[i-2]&&!b[i-3]&&b[i-4]===t+'R'&&!attacked(b,i-1,o)&&!attacked(b,i-2,o))m.push({f:i,t:i-2,cs:'Q'});}
+    }else{for(const[dr,dc]of k==='B'?BD:k==='R'?RD:KD){let rr=r+dr,cc=c+dc;while(on(rr,cc)){const to=rr*8+cc;if(b[to]){if(b[to][0]===o)m.push({f:i,t:to});break;}m.push({f:i,t:to});rr+=dr;cc+=dc;}}}
+  }return m;}
+
+function make(s,m){const b=s.b.slice(),t=s.turn,p=b[m.f],eps=m.t+(t==='w'?8:-8),cap=m.ep?b[eps]:b[m.t];
+  b[m.t]=m.pr?t+m.pr:p;b[m.f]=null;if(m.ep)b[eps]=null;
+  if(m.cs==='K'){b[m.f+1]=b[m.f+3];b[m.f+3]=null;}if(m.cs==='Q'){b[m.f-1]=b[m.f-4];b[m.f-4]=null;}
+  const cr={...s.cr};if(p[1]==='K'){cr[t+'K']=0;cr[t+'Q']=0;}
+  for(const[sq,k]of[[63,'wK'],[56,'wQ'],[7,'bK'],[0,'bQ']])if(m.f===sq||m.t===sq)cr[k]=0;
+  return{b,turn:opp(t),cr,ep:m.dbl?(m.f+m.t)/2:-1,cap};}
+
+const kSq=(b,c)=>b.indexOf(c+'K');
+function legal(s){const t=s.turn;return pseudo(s).filter(m=>{const n=make(s,m);return!attacked(n.b,kSq(n.b,t),opp(t));});}
+const inCheck=s=>attacked(s.b,kSq(s.b,s.turn),opp(s.turn));
+function onlyKings(b){return b.every(p=>!p||p[1]==='K'||false)||b.filter(p=>p&&p[1]!=='K').every(p=>p[1]==='N'||p[1]==='B')&&b.filter(p=>p&&p[1]!=='K').length<=1;}
+
+function evalS(s){let v=0;const b=s.b;for(let i=0;i<64;i++){const p=b[i];if(!p)continue;const r=i>>3,c=i&7,k=p[1];let x=VAL[k];
+    const cen=-(Math.abs(3.5-r)+Math.abs(3.5-c));
+    if(k==='P')x+=(p[0]==='w'?6-r:r-1)*9+(c>1&&c<6?6:0);else if(k==='N'||k==='B')x+=cen*8;else if(k==='Q')x+=cen*2;else if(k==='K')x+=(p[0]==='w'?(r===7?10:-10):(r===0?10:-10));
+    v+=p[0]==='w'?x:-x;}return s.turn==='w'?v:-v;}
+const order=(s,ms)=>ms.map(m=>({m,o:(s.b[m.t]?VAL[s.b[m.t][1]]*10-VAL[s.b[m.f][1]]:0)+(m.pr?800:0)})).sort((a,b)=>b.o-a.o).map(x=>x.m);
+function qs(s,a,bt,d){const sp=evalS(s);if(sp>=bt)return sp;if(sp>a)a=sp;if(d<=0)return a;
+  const ms=order(s,legal(s).filter(m=>s.b[m.t]||m.ep||m.pr));
+  for(const m of ms){const v=-qs(make(s,m),-bt,-a,d-1);if(v>=bt)return v;if(v>a)a=v;}return a;}
+function nega(s,d,a,bt,ply){const ms=legal(s);if(!ms.length)return inCheck(s)?-100000+ply:0;
+  if(d===0)return qs(s,a,bt,4);
+  for(const m of order(s,ms)){const v=-nega(make(s,m),d-1,-bt,-a,ply+1);if(v>=bt)return v;if(v>a)a=v;}return a;}
+function best(s,lv){const ms=order(s,legal(s));let bm=ms[0],bv=-Infinity;
+  const depth=lv===1?1:lv===2?2:3,noise=lv===1?120:lv===2?15:4;
+  for(const m of ms){const n=make(s,m);let v=lv===1?-evalS(n):-nega(n,depth-1,-Infinity,Infinity,1);v+=Math.random()*noise;if(v>bv){bv=v;bm=m;}}return bm;}
+
+/* ---------- UI ---------- */
+let cfg={mode:'cpu',lv:'1',me:'w'};try{Object.assign(cfg,JSON.parse(localStorage.getItem('chessCfg')||'{}'));}catch(e){}
+let S=init(),hist=[],sel=-1,moves=legal(S),last=null,busy=false,over=false,pend=null;
+const flip=()=>cfg.mode==='cpu'&&cfg.me==='b';
+const glyph=p=>`<span class="pc ${p[0]}">${G[p[1]]}${VS}</span>`;
+
+function render(){const bd=$('board'),f=flip(),ck=inCheck(S)?kSq(S.b,S.turn):-1;
+  const dest=sel>=0?moves.filter(m=>m.f===sel):[];let h='';
+  for(let v=0;v<64;v++){const i=f?63-v:v,r=i>>3,c=i&7,p=S.b[i],vr=v>>3,vc=v&7;
+    const cls=['sq',(r+c)%2?'d':'l'];if(last&&(i===last.f||i===last.t))cls.push('last');if(i===sel)cls.push('sel');if(i===ck)cls.push('chk');
+    const dm=dest.find(m=>m.t===i);if(dm)cls.push(p||dm.ep?'cap':'dot');
+    let co='';if(vr===7)co+=`<span class="co f">${'abcdefgh'[c]}</span>`;if(vc===0)co+=`<span class="co r">${8-r}</span>`;
+    h+=`<div class="${cls.join(' ')}" data-i="${i}">${co}${p?glyph(p):''}</div>`;}
+  bd.innerHTML=h;runAnim();
+  // captured
+  const start={P:8,N:2,B:2,R:2,Q:1};for(const col of['w','b']){const cnt={P:0,N:0,B:0,R:0,Q:0};S.b.forEach(p=>{if(p&&p[0]===col&&p[1]!=='K')cnt[p[1]]++;});
+    let s='';for(const k of'QRBNP')for(let n=0;n<Math.max(0,start[k]-cnt[k]);n++)s+=glyph(col+k);$(col==='w'?'capB':'capW').innerHTML=s||'<span style="opacity:.5;font-size:14px">まだ なし</span>';}
+  $('disc').className='disc '+S.turn;
+  let st=`${CN[S.turn]}のばん`;if(cfg.mode==='cpu')st=S.turn===cfg.me?'あなたのばん':'コンピューターが かんがえちゅう…';
+  if(over)st='ゲームおわり';
+  $('stat').innerHTML=st+(ck>=0&&!over?'<small>チェック！ キングを まもろう</small>':(sel<0&&!over&&!(cfg.mode==='cpu'&&S.turn!==cfg.me)?'<small>うごかす こまを タッチしてね</small>':''));
+  $('undo').disabled=!hist.length||busy;}
+
+function checkEnd(){if(moves.length&&!onlyKings(S.b))return false;over=true;
+  let big,msg;if(!moves.length&&inCheck(S)){const w=opp(S.turn);big='チェックメイト！';
+    msg=cfg.mode==='cpu'?(w===cfg.me?'あなたの かち！ すごい！🎉':'コンピューターの かち。もういっかい ちょうせん！'):`${CN[w]}の かち！ おめでとう！`;}
+  else{big='ひきわけ';msg=moves.length?'のこりの こまでは どちらも かてないよ。':'ステイルメイト：うごける こまが ないので ひきわけ。';}
+  $('endBig').textContent=big;$('endMsg').textContent=msg;setTimeout(()=>$('endOv').classList.add('on'),500);return true;}
+
+let anim=null;const DUR=420;
+const vis=i=>flip()?63-i:i;
+const rookMv=m=>m.cs==='K'?[m.f+3,m.f+1]:m.cs==='Q'?[m.f-4,m.f-1]:null;
+function runAnim(){if(!anim)return;const a=anim;anim=null;
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches||!Element.prototype.animate)return;
+  const bd=$('board'),sz=bd.clientWidth/8;
+  if(a.cap){const sq=bd.querySelector(`[data-i="${a.cap.i}"]`);if(sq){sq.insertAdjacentHTML('beforeend',glyph(a.cap.p).replace('class="pc','class="pc ghost'));const g=sq.lastElementChild;
+    g.animate([{opacity:1,transform:'scale(1)'},{opacity:1,transform:'scale(1)',offset:.7},{opacity:0,transform:'scale(.5)'}],{duration:DUR+200,fill:'forwards'}).onfinish=()=>g.remove();}}
+  for(const[f,t]of a.mv){const el=bd.querySelector(`[data-i="${t}"] .pc:not(.ghost)`);if(!el)continue;
+    const vf=vis(f),vt=vis(t),dx=((vf&7)-(vt&7))*sz,dy=((vf>>3)-(vt>>3))*sz;
+    el.classList.add('mv');el.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'translate(0,0)'}],{duration:DUR,easing:'cubic-bezier(.45,.05,.25,1)'}).onfinish=()=>el.classList.remove('mv');}}
+
+function doMove(m){const ci=m.ep?m.t+(S.turn==='w'?8:-8):m.t,cp=S.b[ci];
+  anim={mv:[[m.f,m.t]],cap:cp?{i:ci,p:cp}:null};const rm=rookMv(m);if(rm)anim.mv.push(rm);
+  hist.push({S,last});S=make(S,m);last={f:m.f,t:m.t,cs:m.cs};sel=-1;moves=legal(S);render();
+  if(!checkEnd()&&cfg.mode==='cpu'&&S.turn!==cfg.me)cpu();}
+function cpu(){busy=true;render();setTimeout(()=>{const m=best(S,+cfg.lv);busy=false;if(m)doMove(m);else render();},DUR+250);}
+
+$('board').addEventListener('click',e=>{const sq=e.target.closest('.sq');if(!sq||busy||over)return;const i=+sq.dataset.i;
+  if(cfg.mode==='cpu'&&S.turn!==cfg.me)return;
+  const cand=sel>=0?moves.filter(m=>m.f===sel&&m.t===i):[];
+  if(cand.length===1)return doMove(cand[0]);
+  if(cand.length>1){pend=cand;$('promo').innerHTML='QRBN'.split('').map(k=>`<button data-k="${k}">${glyph(S.turn+k)}</button>`).join('');$('promoOv').classList.add('on');return;}
+  const p=S.b[i];sel=(p&&p[0]===S.turn&&i!==sel)?i:-1;render();});
+$('promo').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||!pend)return;const m=pend.find(x=>x.pr===b.dataset.k);pend=null;$('promoOv').classList.remove('on');doMove(m);});
+
+$('undo').onclick=()=>{if(busy||!hist.length)return;over=false;
+  let um;const pop=()=>{um=last;const h=hist.pop();S=h.S;last=h.last;};pop();
+  if(cfg.mode==='cpu'&&S.turn!==cfg.me&&hist.length)pop();
+  if(um){anim={mv:[[um.t,um.f]]};const rm=rookMv(um);if(rm)anim.mv.push([rm[1],rm[0]]);}
+  sel=-1;moves=legal(S);render();if(cfg.mode==='cpu'&&S.turn!==cfg.me)cpu();};
+
+function syncSetup(){document.querySelectorAll('.seg').forEach(g=>g.querySelectorAll('button').forEach(b=>b.classList.toggle('on',cfg[g.dataset.k]===b.dataset.v)));
+  document.querySelectorAll('.cpuOnly').forEach(x=>x.classList.toggle('hide',cfg.mode!=='cpu'));}
+document.querySelectorAll('.seg').forEach(g=>g.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;cfg[g.dataset.k]=b.dataset.v;syncSetup();}));
+function newGame(){try{localStorage.setItem('chessCfg',JSON.stringify(cfg));}catch(e){}
+  S=init();hist=[];sel=-1;last=null;over=false;busy=false;moves=legal(S);$('setup').classList.remove('on');render();
+  if(cfg.mode==='cpu'&&cfg.me==='b')cpu();}
+$('start').onclick=newGame;
+$('newg').onclick=()=>{if(busy)return;syncSetup();$('setup').classList.add('on');};
+$('again').onclick=()=>{$('endOv').classList.remove('on');syncSetup();$('setup').classList.add('on');};
+$('look').onclick=()=>$('endOv').classList.remove('on');
+
+/* ---------- ルール・こまのうごき（マスの図つき） ---------- */
+function mini(rows,cols,cells){let h=`<div class="mini" style="grid-template-columns:repeat(${cols},var(--m))">`;
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const x=cells[r+','+c]||{};h+=`<div class="ms ${(r+c)%2?'d':'l'} ${x.m||''}">${x.p?glyph(x.p):''}</div>`;}
+  return h+'</div>';}
+function pieceDg(p,dirs,slide,extra){const o={'3,3':{p}};
+  for(const[dr,dc]of dirs){let r=3+dr,c=3+dc;while(r>=0&&r<7&&c>=0&&c<7){o[r+','+c]={m:'dot'};if(!slide)break;r+=dr;c+=dc;}}
+  return mini(7,7,Object.assign(o,extra||{}));}
+const D={dot:{m:'dot'}};
+const MV=[
+ ['キング',pieceDg('wK',KD,0),'まわりの 1マスに うごける。とられそうに なったら まけ！ いちばん だいじな こま。'],
+ ['クイーン',pieceDg('wQ',KD,1),'たて・よこ・ななめ、どこまでも まっすぐ すすめる。いちばん つよい こま。'],
+ ['ルーク',pieceDg('wR',RD,1),'たて・よこに どこまでも まっすぐ。'],
+ ['ビショップ',pieceDg('wB',BD,1),'ななめに どこまでも まっすぐ。ずっと おなじ いろの マスに いるよ。'],
+ ['ナイト',pieceDg('wN',ND,0,{'2,3':{p:'wP'},'3,2':{p:'wP'},'3,4':{p:'wP'},'4,3':{p:'wP'}}),'「L」の かたちに とぶ。まわりに こまが あっても とびこえられる ゆいいつの こま！'],
+ ['ポーン',mini(5,5,{'4,2':{p:'wP'},'3,2':D.dot,'2,2':D.dot,'3,1':{p:'bN',m:'cap'},'3,3':{p:'bB',m:'cap'}}),'まえに 1マス（さいしょの 1かいだけ 2マスも OK）。うしろには もどれない。あいての こまを とるときは ●ではなく、<b>ななめまえ</b>（あかい まる）だよ。']];
+const RL=[
+ ['じゅんばん','','しろが さきに うごかす。そのあとは こうたいで 1かいに 1こずつ。パスは できないよ。'],
+ ['こまを とる',mini(4,4,{'3,0':{p:'wR'},'2,0':D.dot,'1,0':D.dot,'0,0':{p:'bN',m:'cap'},'3,1':D.dot,'3,2':D.dot,'3,3':{p:'wP'}}),'あいての こまが いる マスに うごくと、その こまを とれる（あかい まる）。じぶんの こまが いる マスには いけないし、とびこえる ことも できない（ナイトは べつ）。'],
+ ['チェック',mini(5,5,{'0,2':{p:'bK',m:'att'},'1,2':{m:'ray'},'2,2':{m:'ray'},'3,2':{m:'ray'},'4,2':{p:'wR'}}),'キングが ねらわれて いる ことを「チェック」と いう。チェックされたら かならず ①キングが にげる ②あいだに こまを おく ③ねらっている こまを とる、の どれかを しよう。'],
+ ['チェックメイト（かち）',mini(3,5,{'0,0':{p:'wR'},'0,1':{m:'ray'},'0,2':{p:'bK',m:'att'},'0,3':{m:'ray'},'0,4':{m:'ray'},'1,1':{p:'bP'},'1,2':{p:'bP'},'1,3':{p:'bP'}}),'チェックを どうやっても ふせげない ことを「チェックメイト」と いう。ここで ゲームおわり。チェックメイトした ほうの かち！ この ずでは くろの キングは じぶんの ポーンが じゃまで にげられない。'],
+ ['ステイルメイト（ひきわけ）',mini(5,5,{'0,0':{p:'bK'},'0,1':{m:'ray'},'1,0':{m:'ray'},'1,1':{m:'ray'},'1,2':{p:'wQ'},'3,1':{p:'wK'}}),'チェックされて いないのに、うごける こまが ひとつも ない ときは ひきわけ。かちそうな ときほど きをつけよう！ また、おたがいに こまが ほとんど なくなって（キングだけ など）チェックメイト できない ときも ひきわけ。'],
+ ['プロモーション（へんしん）',`${mini(3,3,{'1,1':{p:'wP'},'0,1':D.dot})}<span>→</span>${mini(3,3,{'0,1':{p:'wQ',m:'last'}})}`,'ポーンが いちばん おくの マスまで いくと、クイーン・ルーク・ビショップ・ナイトの すきな こまに へんしん できる。ふつうは いちばん つよい クイーンを えらぶよ。'],
+ ['キャスリング',`${mini(1,8,{'0,4':{p:'wK'},'0,6':D.dot,'0,7':{p:'wR'}})}<span style="flex-basis:100%;text-align:center">↓</span>${mini(1,8,{'0,5':{p:'wR',m:'last'},'0,6':{p:'wK',m:'last'}})}`,'キングと ルークが いっしょに うごく とくべつな わざ。キングを ルークの ほうへ 2マス うごかすと、ルークが キングを とびこえて となりに くる。できるのは ①キングも その ルークも まだ 1かいも うごいて いない ②あいだに こまが ない ③キングが チェックされて いなくて、とおる マスも ねらわれて いない とき。'],
+ ['アンパッサン',mini(4,3,{'0,1':{m:'last'},'2,1':{p:'bP',m:'last cap'},'1,1':D.dot,'2,0':{p:'wP'}}),'あいての ポーンが さいしょの 2マス すすみで、じぶんの ポーンの すぐ よこに きた とき。その すぐ あとの 1かいだけ、ななめまえ（●）に うごいて その ポーンを とれる。']];
+let tab='mv';
+function renderHelp(){$('helpList').innerHTML=(tab==='mv'?MV:RL).map(([t,dg,d])=>`<div class="hi"${dg?'':' style="grid-template-columns:1fr"'}>${dg?`<div class="dg">${dg}</div>`:''}<div><h3>${t}</h3><p>${d}</p></div></div>`).join('')+
+  (tab==='mv'?'<p style="margin:4px 0 0;font-size:15px">●＝うごける マス　あかい まる＝とれる こま。ゲーム中も こまを タッチすると おなじ しるしが でるよ。</p>':'');
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));$('helpList').parentElement.scrollTop=0;}
+$('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;tab=b.dataset.t;renderHelp();});
+$('helpb').onclick=()=>{renderHelp();$('helpOv').classList.add('on');};$('helpClose').onclick=()=>$('helpOv').classList.remove('on');
+
+syncSetup();render();
+}
+</script>
+</body>
+</html>
